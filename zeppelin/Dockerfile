@@ -1,7 +1,18 @@
-FROM jeffreymanning/centos-base
+## Use provided spark installation ##
+## defining SPARK_HOME makes Zeppelin run spark interpreter process using spark-submit
+##
+## spark-base defines this environment variable
+## SPARK_HOME, When it is defined, load it instead of Zeppelin embedded Spark libraries
+##
+## this will eliminate zeppelin/spark version  mismatches (typically on connect)
+FROM jeffreymanning/spark-base
 
 MAINTAINER Jeff Manning
 
+# well, this needs to be addressed...
+# allow containers withs with USER root to getr root privs
+# requires:
+# oc admin policy add-scc-to-user anyuid -z default -n <namespace installed into>
 USER root
 
 #install the basic packages
@@ -28,6 +39,8 @@ ARG ZEPPELIN_DOWNLOAD_URL=https://www.apache.org/dist/zeppelin
 ARG ZEPPELIN_INSTALL_DIR=/opt
 ARG ZEPPELIN_HOME=${ZEPPELIN_INSTALL_DIR}/zeppelin
 ARG ZEPPELIN_PKG_NAME=zeppelin-${ZEPPELIN_VERSION}-bin-all
+# minimal install (can add interpreters as required)
+ARG ZEPPELIN_MIN_PKG_NAME=zeppelin-${ZEPPELIN_VERSION}-bin-netinst
 
 ### Host environment
 ENV ZEPPELIN_HOME=${ZEPPELIN_HOME}
@@ -44,7 +57,8 @@ WORKDIR ${ZEPPELIN_INSTALL_DIR}
 RUN wget -c ${ZEPPELIN_DOWNLOAD_URL}/zeppelin-${ZEPPELIN_VERSION}/${ZEPPELIN_PKG_NAME}.tgz \
     && tar xvf ${ZEPPELIN_PKG_NAME}.tgz \
     && ln -s ${ZEPPELIN_PKG_NAME} zeppelin \
-    && mkdir -p ${ZEPPELIN_HOME}/logs && mkdir -p ${ZEPPELIN_HOME}/run \
+    && mkdir -p ${ZEPPELIN_HOME}/logs chmod a+rw ${ZEPPELIN_HOME}/logs \
+    && mkdir -p ${ZEPPELIN_HOME}/run chmod a+rw ${ZEPPELIN_HOME}/run \
     && rm -f ${ZEPPELIN_PKG_NAME}.tgz
 
 
@@ -53,6 +67,21 @@ VOLUME ${ZEPPELIN_HOME}/notebook
 VOLUME ${ZEPPELIN_HOME}/conf
 VOLUME ${ZEPPELIN_HOME}/data
 
+### change the ownership
+# change ownership to the spark process (non-root)
+#RUN groupadd -r zeppelin && useradd --no-log-init -r -g zeppelin zeppelin
+#RUN usermod -aG wheel zeppelin
+#RUN usermod -aG spark zeppelin
+#RUN chown -R -L zeppelin:zeppelin ${ZEPPELIN_HOME}
+
+# set the working directory
+#USER zeppelin
+
+# Make the default PWD somewhere that the user can write. This is
+# useful when connecting with 'oc run' and starting a 'spark-shell',
+# which will likely try to create files and directories in PWD and
+# error out if it cannot.
+#WORKDIR /tmp
 WORKDIR ${ZEPPELIN_HOME}
 
 CMD ["/opt/zeppelin/bin/zeppelin.sh"]
