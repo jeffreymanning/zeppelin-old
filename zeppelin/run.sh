@@ -6,7 +6,10 @@ echo "Usage: "
 echo "  ${0} <instanceName>"
 echo
 
-imageTag=jeffreymanning/zeppelin
+accntTag=jeffreymanning
+projectTag=zeppelin
+imageTag=${1:-${accntTag}/${projectTag}}
+
 
 dockerVolume_Data=data
 dockerVolume_Notebook=notebook
