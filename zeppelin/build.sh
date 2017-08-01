@@ -10,7 +10,7 @@
 accntTag=jeffreymanning
 projectTag=zeppelin
 imageTag=${accntTag}/${projectTag}
-versionDef=1.0.0
+versionDef=0.7.2
 version${1:-${versionDef}}
 
 if [ ! "$version" == "" ]; then
